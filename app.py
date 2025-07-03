@@ -59,13 +59,7 @@ if st.session_state.mes_seleccionado is None:
 
         if col.button(mes):
             st.session_state.mes_seleccionado = (mes, i + 1)
-            st.session_state.reiniciar = True
-
-# Verifica si debe reiniciar y detiene la ejecución
-if st.session_state.get("reiniciar", False):
-    st.session_state.reiniciar = False
-    st.session_state.mes_seleccionado = None
-    st.stop()
+            st.experimental_rerun()
 
 # Verificar selección
 if st.session_state.mes_seleccionado is None:
@@ -88,8 +82,8 @@ else:
 
 # Botón para volver a seleccionar el mes
 if st.button("🔙 Volver a seleccionar mes"):
-    st.session_state.reiniciar = True
-    st.stop()
+    st.session_state.mes_seleccionado = None
+    st.experimental_rerun()
 
 # Formulario de ingreso
 st.header(f"Ingreso de datos para: {selected_month[0]} {anio}")
