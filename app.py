@@ -59,7 +59,12 @@ if st.session_state.mes_seleccionado is None:
 
         if col.button(mes):
             st.session_state.mes_seleccionado = (mes, i + 1)
-            st.experimental_rerun()
+            st.session_state.reiniciar = True
+
+# Verifica si debe reiniciar
+if st.session_state.get("reiniciar", False):
+    st.session_state.reiniciar = False
+    st.experimental_rerun()
 
 # Verificar selección
 if st.session_state.mes_seleccionado is None:
@@ -80,7 +85,7 @@ if registro_existente:
 else:
     datos = {}
 
-# 🔙 Botón para volver a seleccionar el mes
+# Botón para volver a seleccionar el mes
 if st.button("🔙 Volver a seleccionar mes"):
     st.session_state.mes_seleccionado = None
     st.experimental_rerun()
@@ -140,10 +145,11 @@ disponible_real = total_ingresos - total_gastos_fijos
 
 # Gastos variables
 st.subheader("Gastos Variables")
-ahorro = st.number_input(
-    "Ahorro (10% ingresos recomendado)", min_value=0.0, format="%.2f",
-    value=to_float(datos.get("ahorro"))
-)
+
+# Ahorro automático (10% de ingresos)
+ahorro = round(total_ingresos * 0.10, 2)
+st.write(f"Ahorro (10% de ingresos): ₡{ahorro:.2f}")
+
 alimentacion = st.number_input(
     "Alimentación", min_value=0.0, format="%.2f",
     value=to_float(datos.get("alimentacion"))
@@ -167,6 +173,10 @@ st.write(f"**Total gastos variables: ₡{total_gastos_variables:.2f}**")
 concepto_variables = "Ahorro, Alimentación, Transporte, Otros, Marchamo"
 disponible_antes_variables = disponible_real
 disponible_final = disponible_real - total_gastos_variables
+
+# Alerta si disponible final es muy bajo
+if disponible_final < 5000:
+    st.warning("⚠️ ¡Cuidado! El dinero disponible al final del mes es muy bajo.")
 
 # RESUMEN FINAL
 st.markdown("---")
