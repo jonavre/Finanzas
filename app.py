@@ -59,7 +59,7 @@ if st.session_state.mes_seleccionado is None:
 
         if col.button(mes, key=f"mes_{i}"):
             st.session_state.mes_seleccionado = (mes, i + 1)
-            st.experimental_set_query_params(mes=i+1)
+            st.query_params["mes"] = str(i + 1)
 
 # Si aún no hay selección, detener
 if st.session_state.mes_seleccionado is None:
