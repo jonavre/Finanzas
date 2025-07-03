@@ -38,11 +38,11 @@ meses = [
     "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ]
 
-# Inicializar session_state para guardar el mes seleccionado
+# Inicializar session_state
 if "mes_seleccionado" not in st.session_state:
     st.session_state.mes_seleccionado = None
 
-# Mostrar botones si aún no se ha elegido mes
+# Si no hay mes seleccionado, mostrar botones
 if st.session_state.mes_seleccionado is None:
     st.subheader("Seleccione el mes para ingresar los datos")
     col1, col2, col3, col4 = st.columns(4)
@@ -57,33 +57,29 @@ if st.session_state.mes_seleccionado is None:
         else:
             col = col4
 
-        if col.button(mes):
+        if col.button(mes, key=f"mes_{i}"):
             st.session_state.mes_seleccionado = (mes, i + 1)
-            st.experimental_rerun()
+            st.experimental_set_query_params(mes=i+1)
 
-# Verificar selección
+# Si aún no hay selección, detener
 if st.session_state.mes_seleccionado is None:
-    st.info("Por favor, seleccione un mes para ingresar los datos.")
+    st.stop()
+
+# Botón para regresar
+if st.button("🔙 Volver a seleccionar mes"):
+    st.session_state.mes_seleccionado = None
     st.stop()
 
 selected_month = st.session_state.mes_seleccionado
 
-# Buscar si ya existen datos para este año y mes
+# Buscar si ya existen datos
 registro_existente = run_query(
     "SELECT * FROM finanzas_mensuales WHERE anio = %s AND mes = %s",
     (anio, selected_month[1]),
     fetch=True
 )
 
-if registro_existente:
-    datos = registro_existente[0]
-else:
-    datos = {}
-
-# Botón para volver a seleccionar el mes
-if st.button("🔙 Volver a seleccionar mes"):
-    st.session_state.mes_seleccionado = None
-    st.experimental_rerun()
+datos = registro_existente[0] if registro_existente else {}
 
 # Formulario de ingreso
 st.header(f"Ingreso de datos para: {selected_month[0]} {anio}")
@@ -115,138 +111,100 @@ st.write(f"**Total ingresos (Salario mensual + Pensión): ₡{total_ingresos:.2f
 
 # Gastos fijos
 st.subheader("Gastos Fijos")
-cuota_carro = st.number_input(
-    "Cuota del carro", min_value=0.0, format="%.2f",
-    value=to_float(datos.get("cuota_carro"))
-)
-cable_internet = st.number_input(
-    "Cable e internet", min_value=0.0, format="%.2f",
-    value=to_float(datos.get("cable_internet"))
-)
-telefono = st.number_input(
-    "Teléfono", min_value=0.0, format="%.2f",
-    value=to_float(datos.get("telefono"))
-)
-moto = st.number_input(
-    "Moto", min_value=0.0, format="%.2f",
-    value=to_float(datos.get("moto"))
-)
+cuota_carro = st.number_input("Cuota del carro", min_value=0.0, format="%.2f", value=to_float(datos.get("cuota_carro")))
+cable_internet = st.number_input("Cable e internet", min_value=0.0, format="%.2f", value=to_float(datos.get("cable_internet")))
+telefono = st.number_input("Teléfono", min_value=0.0, format="%.2f", value=to_float(datos.get("telefono")))
+moto = st.number_input("Moto", min_value=0.0, format="%.2f", value=to_float(datos.get("moto")))
 
 total_gastos_fijos = cuota_carro + cable_internet + telefono + moto
 st.write(f"**Total gastos fijos: ₡{total_gastos_fijos:.2f}**")
 
-concepto_fijos = "Cuota del carro, Cable e internet, Teléfono, Moto"
 disponible_real = total_ingresos - total_gastos_fijos
 
 # Gastos variables
 st.subheader("Gastos Variables")
-
-# Ahorro automático (10% de ingresos)
 ahorro = round(total_ingresos * 0.10, 2)
 st.write(f"Ahorro (10% de ingresos): ₡{ahorro:.2f}")
-
-alimentacion = st.number_input(
-    "Alimentación", min_value=0.0, format="%.2f",
-    value=to_float(datos.get("alimentacion"))
-)
-transporte = st.number_input(
-    "Transporte", min_value=0.0, format="%.2f",
-    value=to_float(datos.get("transporte"))
-)
-otros = st.number_input(
-    "Otros", min_value=0.0, format="%.2f",
-    value=to_float(datos.get("otros"))
-)
-marchamo = st.number_input(
-    "Marchamo", min_value=0.0, format="%.2f",
-    value=to_float(datos.get("marchamo"))
-)
+alimentacion = st.number_input("Alimentación", min_value=0.0, format="%.2f", value=to_float(datos.get("alimentacion")))
+transporte = st.number_input("Transporte", min_value=0.0, format="%.2f", value=to_float(datos.get("transporte")))
+otros = st.number_input("Otros", min_value=0.0, format="%.2f", value=to_float(datos.get("otros")))
+marchamo = st.number_input("Marchamo", min_value=0.0, format="%.2f", value=to_float(datos.get("marchamo")))
 
 total_gastos_variables = ahorro + alimentacion + transporte + otros + marchamo
 st.write(f"**Total gastos variables: ₡{total_gastos_variables:.2f}**")
 
-concepto_variables = "Ahorro, Alimentación, Transporte, Otros, Marchamo"
-disponible_antes_variables = disponible_real
 disponible_final = disponible_real - total_gastos_variables
 
 # Alerta si disponible final es muy bajo
 if disponible_final < 5000:
     st.warning("⚠️ ¡Cuidado! El dinero disponible al final del mes es muy bajo.")
 
-# RESUMEN FINAL
+# Resumen final
 st.markdown("---")
 st.subheader("📊 Resumen Financiero del Mes")
-
 col1, col2 = st.columns(2)
-
 with col1:
     st.write(f"**Total ingresos:** ₡{total_ingresos:.2f}")
     st.write(f"**Total gastos fijos:** ₡{total_gastos_fijos:.2f}")
-    st.write(f"**Ahorro (10% recomendado):** ₡{ahorro:.2f}")
-
+    st.write(f"**Ahorro automático:** ₡{ahorro:.2f}")
 with col2:
     st.write(f"**Total gastos variables:** ₡{total_gastos_variables:.2f}")
-    st.write(f"**Disponible antes de variables:** ₡{disponible_antes_variables:.2f}")
     st.write(f"**Disponible real:** ₡{disponible_final:.2f}")
 
-# Guardar en base de datos
+# Guardar
 if st.button("Guardar registro en base de datos"):
-    if total_ingresos < 0:
-        st.error("El total de ingresos no puede ser negativo. Revise los valores ingresados.")
-    else:
-        query = """
-    INSERT INTO finanzas_mensuales (
-        anio, mes, salario_semana1, salario_semana2, salario_semana3, salario_semana4, salario_semana5,
-        pension_alimenticia, total_ingresos,
-        cuota_carro, cable_internet, telefono, moto, total_gastos_fijos,
-        disponible_real, ahorro, alimentacion, transporte, otros, marchamo,
-        total_gastos_variables, disponible_antes_variables, concepto_fijos, concepto_variables
-    ) VALUES (
-        %s, %s, %s, %s, %s, %s, %s,
-        %s, %s,
-        %s, %s, %s, %s, %s,
-        %s, %s, %s, %s, %s, %s,
-        %s, %s, %s, %s
-    )
-    ON CONFLICT (anio, mes) DO UPDATE SET
-        salario_semana1 = EXCLUDED.salario_semana1,
-        salario_semana2 = EXCLUDED.salario_semana2,
-        salario_semana3 = EXCLUDED.salario_semana3,
-        salario_semana4 = EXCLUDED.salario_semana4,
-        salario_semana5 = EXCLUDED.salario_semana5,
-        pension_alimenticia = EXCLUDED.pension_alimenticia,
-        total_ingresos = EXCLUDED.total_ingresos,
-        cuota_carro = EXCLUDED.cuota_carro,
-        cable_internet = EXCLUDED.cable_internet,
-        telefono = EXCLUDED.telefono,
-        moto = EXCLUDED.moto,
-        total_gastos_fijos = EXCLUDED.total_gastos_fijos,
-        disponible_real = EXCLUDED.disponible_real,
-        ahorro = EXCLUDED.ahorro,
-        alimentacion = EXCLUDED.alimentacion,
-        transporte = EXCLUDED.transporte,
-        otros = EXCLUDED.otros,
-        marchamo = EXCLUDED.marchamo,
-        total_gastos_variables = EXCLUDED.total_gastos_variables,
-        disponible_antes_variables = EXCLUDED.disponible_antes_variables,
-        concepto_fijos = EXCLUDED.concepto_fijos,
-        concepto_variables = EXCLUDED.concepto_variables
-    """
-        params = (
-            anio, selected_month[1], *salarios_semanales,
+    query = """
+        INSERT INTO finanzas_mensuales (
+            anio, mes, salario_semana1, salario_semana2, salario_semana3, salario_semana4, salario_semana5,
             pension_alimenticia, total_ingresos,
             cuota_carro, cable_internet, telefono, moto, total_gastos_fijos,
             disponible_real, ahorro, alimentacion, transporte, otros, marchamo,
             total_gastos_variables, disponible_antes_variables, concepto_fijos, concepto_variables
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s, %s,
+            %s, %s,
+            %s, %s, %s, %s, %s,
+            %s, %s, %s, %s, %s, %s,
+            %s, %s, %s, %s
         )
+        ON CONFLICT (anio, mes) DO UPDATE SET
+            salario_semana1 = EXCLUDED.salario_semana1,
+            salario_semana2 = EXCLUDED.salario_semana2,
+            salario_semana3 = EXCLUDED.salario_semana3,
+            salario_semana4 = EXCLUDED.salario_semana4,
+            salario_semana5 = EXCLUDED.salario_semana5,
+            pension_alimenticia = EXCLUDED.pension_alimenticia,
+            total_ingresos = EXCLUDED.total_ingresos,
+            cuota_carro = EXCLUDED.cuota_carro,
+            cable_internet = EXCLUDED.cable_internet,
+            telefono = EXCLUDED.telefono,
+            moto = EXCLUDED.moto,
+            total_gastos_fijos = EXCLUDED.total_gastos_fijos,
+            disponible_real = EXCLUDED.disponible_real,
+            ahorro = EXCLUDED.ahorro,
+            alimentacion = EXCLUDED.alimentacion,
+            transporte = EXCLUDED.transporte,
+            otros = EXCLUDED.otros,
+            marchamo = EXCLUDED.marchamo,
+            total_gastos_variables = EXCLUDED.total_gastos_variables,
+            disponible_antes_variables = EXCLUDED.disponible_antes_variables,
+            concepto_fijos = EXCLUDED.concepto_fijos,
+            concepto_variables = EXCLUDED.concepto_variables
+    """
+    params = (
+        anio, selected_month[1], *salarios_semanales,
+        pension_alimenticia, total_ingresos,
+        cuota_carro, cable_internet, telefono, moto, total_gastos_fijos,
+        disponible_real, ahorro, alimentacion, transporte, otros, marchamo,
+        total_gastos_variables, disponible_real, "Fijos", "Variables"
+    )
+    result = run_query(query, params)
+    if result is None:
+        st.success("Registro guardado exitosamente.")
+    else:
+        st.error("No se pudo guardar el registro.")
 
-        result = run_query(query, params)
-        if result is None:
-            st.success("Registro guardado exitosamente.")
-        else:
-            st.error("No se pudo guardar el registro.")
-
-# Mostrar registros guardados
+# Mostrar registros
 if st.checkbox("Mostrar registros guardados"):
     registros = run_query("SELECT * FROM finanzas_mensuales ORDER BY anio DESC, mes DESC", fetch=True)
     if registros:
